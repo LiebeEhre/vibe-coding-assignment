@@ -4,6 +4,48 @@ import os
 from datetime import date
 
 # =========================
+# 달력 스타일 설정
+# =========================
+ui.add_head_html("""
+<style>
+/* 달력 상단 파란색 헤더 배경 */
+.q-date__header {
+    background-color: #4a90e2 !important;
+}
+
+/* 파란색 헤더 안의 선택된 날짜/년도 표시 */
+.q-date__header,
+.q-date__header *,
+.q-date__header-title,
+.q-date__header-title span,
+.q-date__header-subtitle,
+.q-date__header-subtitle span,
+.q-date__header-label,
+.q-date__header-label span,
+.q-date__header button,
+.q-date__header button span {
+    color: white !important;
+    font-weight: bold !important;
+}
+
+/* 선택된 년도 숫자가 들어가는 영역 */
+.q-date__header-title {
+    font-size: 26px !important;
+    color: white !important;
+}
+
+/* 년도 선택 화면에서 선택된 년도 버튼 */
+.q-date__years-item--active,
+.q-date__years-item--active span,
+.q-date__years-item--active button,
+.q-date__years-item--active button span {
+    color: white !important;
+    font-weight: bold !important;
+}
+</style>
+""")
+
+# =========================
 # 파일 설정
 # =========================
 TASK_FILE = 'tasks.json'
@@ -15,6 +57,9 @@ tasks = []
 current_filter = 'all'  # all, active, completed
 
 task_list_area = None
+all_filter_button = None
+active_filter_button = None
+completed_filter_button = None
 
 
 # =========================
@@ -78,7 +123,7 @@ def add_task(title_input, description_input, due_date_input):
 
     title_input.value = ''
     description_input.value = ''
-    due_date_input.value = None
+    due_date_input.set_value(date.today().isoformat())
 
     ui.notify('과제가 추가되었습니다.', color='positive')
     render_tasks()
@@ -108,7 +153,26 @@ def set_filter(filter_type):
     global current_filter
 
     current_filter = filter_type
+    update_filter_button_styles()
     render_tasks()
+
+
+def update_filter_button_styles():
+    buttons = [
+        (all_filter_button, current_filter == 'all'),
+        (active_filter_button, current_filter == 'active'),
+        (completed_filter_button, current_filter == 'completed')
+    ]
+    
+    for btn, is_selected in buttons:
+        if btn:
+            # 모든 테두리 클래스 제거
+            btn.classes(remove='border-2 border-green-500 border border-gray-300')
+            # 선택 여부에 따라 새 클래스 적용
+            if is_selected:
+                btn.classes('border-2 border-green-500 bg-white text-black font-bold')
+            else:
+                btn.classes('border border-gray-300 bg-white text-black font-bold')
 
 
 def get_filtered_tasks():
@@ -197,9 +261,16 @@ ui.label('바이브코딩을 활용하여 개발한 과제 관리 프로그램�
 with ui.card().classes('w-full max-w-3xl p-5'):
     ui.label('과제 추가').classes('text-xl font-bold mb-3')
 
-    title_input = ui.input('과제 제목').classes('w-full')
-    description_input = ui.textarea('과제 설명').classes('w-full')
-    due_date_input = ui.date('마감일').classes('w-full')
+    title_input = ui.input('과제 제목').classes('w-full text-black')
+    description_input = ui.textarea('과제 설명').classes('w-full text-black')
+    today = date.today().isoformat()
+    due_date_input = ui.date(value=today).classes('w-full text-black')
+
+    ui.timer(
+        0.1,
+        lambda: due_date_input.set_value(date.today().isoformat()),
+        once=True
+    )
 
     ui.button(
         '과제 추가',
@@ -210,12 +281,13 @@ with ui.card().classes('w-full max-w-3xl p-5 mt-5'):
     ui.label('과제 목록').classes('text-xl font-bold mb-3')
 
     with ui.row().classes('gap-2 mb-4'):
-        ui.button('전체', on_click=lambda: set_filter('all')).props('outline')
-        ui.button('미완료', on_click=lambda: set_filter('active')).props('outline')
-        ui.button('완료', on_click=lambda: set_filter('completed')).props('outline')
+        all_filter_button = ui.button('전체', on_click=lambda: set_filter('all')).classes('border-2 border-green-500 bg-white text-black font-bold')
+        completed_filter_button = ui.button('완료', on_click=lambda: set_filter('completed')).classes('border border-gray-300 bg-white text-gray-700 font-bold')
+        active_filter_button = ui.button('미완료', on_click=lambda: set_filter('active')).classes('border border-gray-300 bg-white text-gray-700 font-bold')
 
+    update_filter_button_styles()
     task_list_area = ui.column().classes('w-full')
 
 render_tasks()
 
-ui.run()
+ui.run(port=8090)
